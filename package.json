@@ -6,13 +6,24 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test:eslint": "echo \"\\Running eslint check\" && eslint .",
+    "test:tsc": "echo \"\\Running typescript check\" && tsc"
   },
   "dependencies": {
+    "@types/react": "~18.0.27",
+    "@types/react-native": "^0.72.2",
+    "eslint": "^8.44.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-config-universe": "^11.3.0",
+    "eslint-plugin-prettier": "^5.0.0-alpha.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
     "expo": "~48.0.18",
     "expo-status-bar": "~1.4.4",
+    "prettier": "^3.0.0",
     "react": "18.2.0",
-    "react-native": "0.71.8"
+    "react-native": "0.71.8",
+    "typescript": "^4.9.4"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
