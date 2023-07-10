@@ -1,11 +1,12 @@
-import { Text, Pressable, View } from 'react-native';
+import { Text, Pressable, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useUserStore } from '../../stores/userStore';
 import { colors } from 'theme/colors';
 import { Whirlwind } from '../../skills/warriorSkills';
+import Tabs from '../../navigation/HomeTabs';
 
-function Home() {
+function Home({ navigation }: any) {
   const { character, removeCharacter, learnSkill } = useUserStore();
 
   if (!character) {
@@ -64,6 +65,9 @@ function Home() {
           Delete character
         </Text>
       </Pressable>
+      <TouchableOpacity onPress={() => navigation.navigate('Inventory')}>
+        <Text>Inventory</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
