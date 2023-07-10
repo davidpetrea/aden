@@ -4,6 +4,7 @@
     "prettier/prettier": [
       "error",
       {
+        "trailingComma": "auto",
         "endOfLine": "auto",
         "singleQuote": true,
         "jsxSingleQuote": true

@@ -1,15 +1,21 @@
 import { useState } from 'react';
-import { View, TextInput, Text } from 'react-native';
+import { View, TextInput, Text, TextInputProps } from 'react-native';
 
 import { colors } from '../../theme/colors';
 
 type TextFieldProps = {
   label?: string;
   placeholder?: string;
-  className?: string; //TODO: proper combining of classes
+  className?: string; //TODO: proper combining of classes,
+  inputProps: TextInputProps;
 };
 
-function TextField({ label, placeholder, className }: TextFieldProps) {
+function TextField({
+  label,
+  placeholder,
+  className,
+  inputProps,
+}: TextFieldProps) {
   const [isFocused, setIsFocused] = useState(false);
   return (
     <View className='w-full'>
@@ -30,6 +36,7 @@ function TextField({ label, placeholder, className }: TextFieldProps) {
         onBlur={() => {
           setIsFocused(false);
         }}
+        {...inputProps}
       />
     </View>
   );

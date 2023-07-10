@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View, Text } from 'react-native';
 
 import NavContainer from './src/navigation/NavContainer';
+import { useUserStore } from './src/stores/userStore';
 
 export default function App() {
   const [fontsLoaded] = useFonts({
