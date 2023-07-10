@@ -41,8 +41,18 @@ function CharacterCreate() {
         <Controller
           control={control}
           rules={{
-            required: true,
-            maxLength: 24,
+            required: {
+              value: true,
+              message: 'Character name is required.',
+            },
+            minLength: {
+              value: 3,
+              message: 'Character name has a minimum length of 3.',
+            },
+            maxLength: {
+              value: 24,
+              message: ' Character name is too long.',
+            },
           }}
           render={({ field: { onChange, onBlur, value } }) => (
             <TextField
