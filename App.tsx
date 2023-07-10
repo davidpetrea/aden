@@ -1,19 +1,21 @@
+import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
-import { Text, View } from 'react-native';
+import { View, Text } from 'react-native';
+
+import NavContainer from './src/navigation/NavContainer';
 
 export default function App() {
-  return (
-    <View className='flex-1 items-center justify-center bg-green-200 p-4'>
-      <Text>
-        Open up App.js to start working on your hhhh oh weee CRAZY YE!
-      </Text>
-      <Text className='font-bold text-red-700'>
-        Open up App.js to start working on your hhhh oh weee CRAZY YE!
-      </Text>
-      <Text>
-        Open up App.js to start working on your hhhh oh weee CRAZY YE!
-      </Text>
-      <StatusBar style='auto' />
-    </View>
-  );
+  const [fontsLoaded] = useFonts({
+    'Josefin-Sans': require('./assets/fonts/JosefinSans.ttf'),
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  return <NavContainer />;
 }
