@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Character, { CharacterClass } from '../character';
 import { create } from 'zustand';
+import Skill from 'src/skills';
 
 enum UserStorageFields {
   'character' = 'character',
@@ -20,9 +21,10 @@ interface UserState {
   getCharacter: () => Promise<void>;
   setCharacter: (character: Character) => Promise<void>;
   removeCharacter: () => Promise<void>;
+  learnSkill: (skill: Skill) => Promise<void>;
 }
 
-export const useUserStore = create<UserState>()((set) => ({
+export const useUserStore = create<UserState>()((set, get) => ({
   character: undefined,
   getCharacter: async () => {
     try {
@@ -30,6 +32,7 @@ export const useUserStore = create<UserState>()((set) => ({
         UserStorageFields.character
       );
       const character = characterJson ? JSON.parse(characterJson) : null;
+
       if (character) {
         set({ character });
       }
@@ -49,7 +52,7 @@ export const useUserStore = create<UserState>()((set) => ({
     await AsyncStorage.setItem(
       UserStorageFields.character,
       JSON.stringify({
-        newCharacter,
+        ...newCharacter,
       })
     );
 
@@ -81,5 +84,17 @@ export const useUserStore = create<UserState>()((set) => ({
         console.log(err.message);
       }
     }
+  },
+  learnSkill: async (skill) => {
+    const newCharacter = {
+      ...get().character!,
+      skills: [...get().character?.skills!, skill],
+    };
+
+    set({
+      character: newCharacter,
+    });
+
+    get().setCharacter(newCharacter);
   },
 }));

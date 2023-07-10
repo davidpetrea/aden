@@ -10,6 +10,8 @@ export default function App() {
     'Josefin-Sans': require('./assets/fonts/JosefinSans.ttf'),
   });
 
+  const dummy = 'text-[#3b82f6] text-[#f97316]';
+
   if (!fontsLoaded) {
     return (
       <View>

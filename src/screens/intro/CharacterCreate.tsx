@@ -107,7 +107,7 @@ const ClassSelectButton = ({
   onPress: () => void;
 }) => {
   const textClassStyling: Record<CharacterClass, string> = {
-    warrior: 'text-orange-500',
+    warrior: `text-orange-500`,
     mage: 'text-blue-500',
   };
 

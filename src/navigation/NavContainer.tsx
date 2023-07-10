@@ -9,8 +9,6 @@ const NavContainer = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { character, getCharacter } = useUserStore();
 
-  console.log('character?', character);
-
   useEffect(() => {
     async function loadUser() {
       try {
@@ -25,7 +23,6 @@ const NavContainer = () => {
     loadUser();
   }, [getCharacter]);
 
-  console.log(isLoading);
   if (isLoading) {
     return (
       <SafeAreaView className='flex-1 gap-y-4 items-center justify-center bg-neutral-900 p-4'>
