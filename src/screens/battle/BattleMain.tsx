@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePlayerStore } from '../../stores/playerStore';
 import { useGameManagerStore } from '../../stores/gameManagerStore';
 import { BattleStackScreenProps } from '../../navigation/types';
+import PlayerPanel from 'components/battle/playerPanel/PlayerPanel';
 
 function BattleMain({
   navigation,
@@ -11,6 +12,7 @@ function BattleMain({
 }: BattleStackScreenProps<'BattleMain'>) {
   const player = usePlayerStore((state) => state.player);
   const damagePlayer = usePlayerStore((state) => state.damagePlayer);
+  const healPlayer = usePlayerStore((state) => state.healPlayer);
 
   const currentBattle = useGameManagerStore((state) => state.currentBattle);
   const currentTurnEntity = useGameManagerStore(
@@ -46,6 +48,7 @@ function BattleMain({
     if (currentBattle) endBattle();
   };
 
+  //TODO: handlePlayerAction - based on type : attack / skill / item
   const handleEnemyDamage = (enemyId: string) => {
     const result = damageEnemyById(enemyId, player?.damage ?? 0);
 
@@ -59,14 +62,20 @@ function BattleMain({
         if (result.isLastEnemy) {
           handleBattleWin();
         }
-      } else {
-        nextTurn();
       }
+      nextTurn();
     }
   };
 
+  const handleDefeatEndBattle = () => {
+    handleEndBattle();
+
+    const halfPlayerHp = (player?.maxHealth! / 2).toString();
+    healPlayer(parseInt(halfPlayerHp));
+  };
+
   const isPlayerTurn = currentTurnEntity?.id === 'player_id';
-  //Main game loop
+  //Main battle loop
   useEffect(() => {
     let timer: NodeJS.Timer;
     if (!player) return;
@@ -92,31 +101,39 @@ function BattleMain({
         }
 
         nextTurn();
-      }, 2000);
+      }, 500);
     }
 
     return () => {
-      console.log('clearing timer...');
       clearTimeout(timer);
     };
-  }, [currentTurnEntity, currentRoundOrder, player]);
+  }, [currentTurnEntity, currentRoundOrder, player, isOngoing, isPlayerTurn]);
 
   return (
-    <SafeAreaView className='flex-1 gap-y-4 items-center bg-neutral-900 p-4'>
+    <SafeAreaView className='flex-1 gap-y-4 items-center bg-neutral-900'>
       <Text className='text-xl text-white font-bold'>Battle Screen</Text>
       <Text className='text-base text-white font-semibold'>
         Current turn: {currentBattle?.currentTurnEntity?.name}
       </Text>
       {/* Enemies */}
-      <View className='my-4 flex-row w-full gap-x-2'>
+      <View className='my-4 flex-row flex-wrap w-full justify-center'>
         {currentBattle?.enemies.map((enemy) => (
           <Pressable
-            className={`bg-neutral-800 font-bold p-4 rounded-lg border ${
-              enemy.currentHealth === 0 ? 'border-red-500' : 'border-green-500'
+            className={`bg-neutral-800 font-bold p-4 rounded-lg border w-[30%] mr-2 mb-2 ${
+              enemy.currentHealth === 0
+                ? 'border-red-500'
+                : currentBattle?.currentTurnEntity?.id === enemy.id
+                ? 'border-gray-100'
+                : 'border-green-500'
             }`}
             key={enemy.id}
             onPress={() => handleEnemyDamage(enemy.id)}
-            disabled={enemy.currentHealth === 0 || !isOngoing || isDefeat}
+            disabled={
+              enemy.currentHealth === 0 ||
+              !isOngoing ||
+              isDefeat ||
+              !isPlayerTurn
+            }
           >
             <Text className='text-white text-lg'>{enemy.name}</Text>
             <Text className='text-lg text-white font-semibold'>
@@ -129,13 +146,13 @@ function BattleMain({
         ))}
       </View>
       {/* Queue */}
-      <View className='my-4 flex w-full gap-x-2 mb-2'>
+      <View className='my-4 flex w-full gap-x-2 mb-2 border border-gray-300 py-2 rounded-2xl'>
         <Text className='text-white mb-2'>Queue:</Text>
-        <View className='flex-row gap-x-2'>
+        <View className='flex-row flex-wrap'>
           {currentBattle?.currentRoundOrder?.map((entity) => (
             <Text
-              key={entity.name}
-              className={`text-white text-lg bg-gray-700 rounded-xl p-1 px-2 border border-transparent ${
+              key={entity.id}
+              className={`text-white text-lg mr-2 mb-2 bg-gray-700 rounded-xl p-1 px-2 border border-transparent ${
                 currentBattle.currentTurnEntity?.id === entity.id
                   ? 'border-gray-100'
                   : ''
@@ -147,7 +164,10 @@ function BattleMain({
         </View>
       </View>
       {/* Battle log */}
-      <ScrollView className='my-4 w-full gap-x-2 bg-gray-500 rounded-md p-2 max-h-[300px]'>
+      <ScrollView
+        className='my-4 w-full gap-x-2 bg-gray-500 rounded-md max-h-[300px]'
+        contentContainerStyle={{ padding: 8 }}
+      >
         {currentBattle?.log.map((entry) => (
           <Text
             key={entry.id}
@@ -155,8 +175,7 @@ function BattleMain({
           >{`${entry.content}`}</Text>
         ))}
       </ScrollView>
-
-      {currentBattle?.currentTurnEntity?.id === 'player_id' && (
+      {currentBattle?.currentTurnEntity?.id === 'player_id' && isOngoing && (
         <Text className='text-xl font-semibold text-green-300'>
           Player turn is NOW!
         </Text>
@@ -175,7 +194,7 @@ function BattleMain({
           <Text className='text-3xl text-red-500'>Battle lost...</Text>
           <Pressable
             className={`bg-neutral-800 font-bold p-4 rounded-lg w-2/3 transition duration-200 ease-in-out`}
-            onPress={handleEndBattle}
+            onPress={handleDefeatEndBattle}
           >
             <Text className='text-slate-50 font-[600] text-center uppercase font-[Josefin-Sans]'>
               Return to town
@@ -196,6 +215,7 @@ function BattleMain({
           </Pressable>
         </>
       )}
+      <PlayerPanel />
     </SafeAreaView>
   );
 }

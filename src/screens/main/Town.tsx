@@ -33,11 +33,58 @@ const enemy2: Enemy = {
   loot: ['item1', 'item2'],
   damage: 2,
 };
+const enemy3: Enemy = {
+  name: 'Skeleton Archer',
+  id: uuid.v4().toString(),
+  currentHealth: SKELETON_ARCHER_BASE_HEALTH,
+  maxHealth: SKELETON_ARCHER_BASE_HEALTH,
+  initiative: 3,
+  loot: ['item1', 'item2'],
+  damage: 2,
+};
+const enemy4: Enemy = {
+  name: 'Skeleton Archer',
+  id: uuid.v4().toString(),
+  currentHealth: SKELETON_ARCHER_BASE_HEALTH,
+  maxHealth: SKELETON_ARCHER_BASE_HEALTH,
+  initiative: 3,
+  loot: ['item1', 'item2'],
+  damage: 2,
+};
+const enemy5: Enemy = {
+  name: 'Skeleton Archer',
+  id: uuid.v4().toString(),
+  currentHealth: SKELETON_ARCHER_BASE_HEALTH,
+  maxHealth: SKELETON_ARCHER_BASE_HEALTH,
+  initiative: 3,
+  loot: ['item1', 'item2'],
+  damage: 2,
+};
+
+const enemy6: Enemy = {
+  name: 'Skeleton Archer',
+  id: uuid.v4().toString(),
+  currentHealth: SKELETON_ARCHER_BASE_HEALTH,
+  maxHealth: SKELETON_ARCHER_BASE_HEALTH,
+  initiative: 3,
+  loot: ['item1', 'item2'],
+  damage: 2,
+};
+const enemy7: Enemy = {
+  name: 'Skeleton Archer',
+  id: uuid.v4().toString(),
+  currentHealth: SKELETON_ARCHER_BASE_HEALTH,
+  maxHealth: SKELETON_ARCHER_BASE_HEALTH,
+  initiative: 3,
+  loot: ['item1', 'item2'],
+  damage: 2,
+};
 
 function Town({ navigation, route }: HomeStackScreenProps<'Town'>) {
   const player = usePlayerStore((state) => state.player);
   const removePlayer = usePlayerStore((state) => state.removePlayer);
   const fullyHealPlayer = usePlayerStore((state) => state.fullyHealPlayer);
+  const resetAP = usePlayerStore((state) => state.resetAP);
 
   const { navigate } = navigation;
 
@@ -58,7 +105,7 @@ function Town({ navigation, route }: HomeStackScreenProps<'Town'>) {
   }));
 
   const newBattle: Battle = {
-    enemies: [enemy1, enemy2],
+    enemies: [enemy1, enemy2, enemy3, enemy4, enemy5, enemy6, enemy7],
     player: player!,
     log: [],
   };
@@ -68,6 +115,8 @@ function Town({ navigation, route }: HomeStackScreenProps<'Town'>) {
     setCurrentBattle(newBattle);
 
     initBattle();
+
+    resetAP();
 
     console.log(getCurrentBattle());
   };

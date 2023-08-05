@@ -19,12 +19,16 @@ type ClassSpecificFields = Pick<
 const playerDefaults: Omit<Player, keyof ClassSpecificFields | 'name'> = {
   level: 1,
   id: 'player_id',
-  damage: 6, //TODO: calculate this based on stats and items
+  damage: 6, //TODO: calculate this based on stats and items,
+  currentExp: 0,
+  currentExpRequired: 250,
+  currentAP: 4,
+  maxAP: 4,
 };
 
 //TODO: proper class config
-const WARRIOR_BASE_HEALTH = 25;
-const MAGE_BASE_HEALTH = 25;
+const WARRIOR_BASE_HEALTH = 44;
+const MAGE_BASE_HEALTH = 32;
 
 const warriorDefaults: ClassSpecificFields = {
   currentHealth: WARRIOR_BASE_HEALTH,
@@ -43,6 +47,10 @@ export type Player = Entity & {
   name: string;
   specialization: CharacterClass;
   level: number;
+  currentExp: number;
+  currentExpRequired: number;
+  currentAP: number;
+  maxAP: number;
 };
 
 interface PlayerState {
@@ -55,6 +63,9 @@ interface PlayerState {
   removePlayer: () => Promise<void>;
   damagePlayer: (damage: number) => void;
   fullyHealPlayer: () => void;
+  healPlayer: (amount: number) => void;
+  consumeAP: (amount: number) => void;
+  resetAP: () => void;
 }
 
 export const usePlayerStore = create<PlayerState>()((set, get) => ({
@@ -153,6 +164,40 @@ export const usePlayerStore = create<PlayerState>()((set, get) => ({
       player: {
         ...currentPlayer,
         currentHealth: currentPlayer.maxHealth,
+      },
+    });
+  },
+  healPlayer: (amount) => {
+    const currentPlayer = get().player;
+    if (!currentPlayer) return;
+    set({
+      player: {
+        ...currentPlayer,
+        currentHealth: currentPlayer.currentHealth + amount,
+      },
+    });
+  },
+  consumeAP: (amount) => {
+    const currentPlayer = get().player;
+    if (!currentPlayer) return;
+
+    if (currentPlayer.currentAP < amount) return;
+
+    set({
+      player: {
+        ...currentPlayer,
+        currentAP: currentPlayer.currentAP - amount,
+      },
+    });
+  },
+  resetAP: () => {
+    const currentPlayer = get().player;
+    if (!currentPlayer) return;
+
+    set({
+      player: {
+        ...currentPlayer,
+        currentAP: currentPlayer.maxAP,
       },
     });
   },

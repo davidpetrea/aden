@@ -44,7 +44,11 @@ const NavContainer = () => {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
         {!player && <Stack.Screen name='Intro' component={IntroStack} />}
         {player && !currentBattle && (
           <Stack.Screen name='Main' component={MainTab} />

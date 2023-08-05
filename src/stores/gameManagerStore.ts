@@ -278,6 +278,7 @@ export const useGameManagerStore = create<GameManagerState>()((set, get) => ({
     set({
       currentBattle: {
         ...currentBattle,
+        isOngoing: false,
         isWon: true,
       },
     });
