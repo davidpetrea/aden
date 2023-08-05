@@ -1,7 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Character, { CharacterClass } from '../character';
+
 import { create } from 'zustand';
 import { Entity } from './gameManagerStore';
+
+//TODO: Find better way to config class defaults to make it more readable/scalable
+
+export type CharacterClass = 'warrior' | 'mage';
 
 enum PlayerStorageFields {
   'player' = 'player',
@@ -9,20 +13,28 @@ enum PlayerStorageFields {
 
 type ClassSpecificFields = Pick<
   Player,
-  'health' | 'initiative' | 'specialization'
+  'maxHealth' | 'currentHealth' | 'initiative' | 'specialization'
 >;
 
 const playerDefaults: Omit<Player, keyof ClassSpecificFields | 'name'> = {
   level: 1,
+  id: 'player_id',
+  damage: 6, //TODO: calculate this based on stats and items
 };
 
+//TODO: proper class config
+const WARRIOR_BASE_HEALTH = 25;
+const MAGE_BASE_HEALTH = 25;
+
 const warriorDefaults: ClassSpecificFields = {
-  health: 10,
+  currentHealth: WARRIOR_BASE_HEALTH,
+  maxHealth: WARRIOR_BASE_HEALTH,
   initiative: 10,
   specialization: 'warrior',
 };
 const mageDefaults: ClassSpecificFields = {
-  health: 7,
+  currentHealth: MAGE_BASE_HEALTH,
+  maxHealth: MAGE_BASE_HEALTH,
   initiative: 8,
   specialization: 'mage',
 };
@@ -41,6 +53,8 @@ interface PlayerState {
   getPlayer: () => Promise<void>;
   setPlayer: (player: Player) => Promise<void>;
   removePlayer: () => Promise<void>;
+  damagePlayer: (damage: number) => void;
+  fullyHealPlayer: () => void;
 }
 
 export const usePlayerStore = create<PlayerState>()((set, get) => ({
@@ -118,5 +132,28 @@ export const usePlayerStore = create<PlayerState>()((set, get) => ({
         console.log(err.message);
       }
     }
+  },
+  damagePlayer: (damage) => {
+    const currentPlayer = get().player;
+    if (!currentPlayer) return;
+
+    let isDead = currentPlayer.currentHealth - damage <= 0;
+
+    set({
+      player: {
+        ...currentPlayer,
+        currentHealth: isDead ? 0 : currentPlayer.currentHealth - damage,
+      },
+    });
+  },
+  fullyHealPlayer: () => {
+    const currentPlayer = get().player;
+    if (!currentPlayer) return;
+    set({
+      player: {
+        ...currentPlayer,
+        currentHealth: currentPlayer.maxHealth,
+      },
+    });
   },
 }));

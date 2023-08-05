@@ -2,16 +2,16 @@ import TextField from 'components/ui/TextField';
 import { Text, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { usePlayerStore } from '../../stores/playerStore';
-import { useForm, Controller } from 'react-hook-form';
-import Character, { CharacterClass } from 'src/character';
-
 import {
-  IntroStackScreenProps,
-  RootStackScreenProps,
-} from 'src/navigation/types';
+  CharacterClass,
+  Player,
+  usePlayerStore,
+} from '../../stores/playerStore';
+import { useForm, Controller } from 'react-hook-form';
 
-type FormState = Pick<Character, 'name' | 'specialization'>;
+import { IntroStackScreenProps } from 'src/navigation/types';
+
+type FormState = Pick<Player, 'name' | 'specialization'>;
 
 function CharacterCreate({
   navigation,
