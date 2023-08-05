@@ -1,13 +1,10 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 
-import CharacterCreate from '../screens/intro/CharacterCreate';
+import CharacterCreate from '../../screens/intro/CharacterCreate';
+import { IntroStackParamList } from '../types';
 
-export type IntroStackParams = {
-  CharacterCreate: undefined;
-};
-
-const Stack = createNativeStackNavigator<IntroStackParams>();
+const Stack = createNativeStackNavigator<IntroStackParamList>();
 
 const IntroStack = () => {
   return (

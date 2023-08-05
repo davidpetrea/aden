@@ -1,19 +1,28 @@
 import { NavigationContainer } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, Text } from 'react-native';
-import GameStack from './GameStack';
-import IntroStack from './IntroStack';
-import { useUserStore } from '../stores/userStore';
+import MainTab from './main/MainTab';
+import IntroStack from './intro/IntroStack';
+import { usePlayerStore } from '../stores/playerStore';
+import { useGameManagerStore } from '../stores/gameManagerStore';
+import BattleStack from './battle/BattleStack';
+import { createStackNavigator } from '@react-navigation/stack';
+import { RootStackParamList } from './types';
+
+const Stack = createStackNavigator<RootStackParamList>();
 
 const NavContainer = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const { character, getCharacter } = useUserStore();
+  const player = usePlayerStore((state) => state.player);
+  const getPlayer = usePlayerStore((state) => state.getPlayer);
+
+  const currentBattle = useGameManagerStore((state) => state.currentBattle);
 
   useEffect(() => {
     async function loadUser() {
       try {
         setIsLoading(true);
-        await getCharacter();
+        await getPlayer();
       } catch (err) {
         console.log(err);
       } finally {
@@ -21,7 +30,7 @@ const NavContainer = () => {
       }
     }
     loadUser();
-  }, [getCharacter]);
+  }, [getPlayer]);
 
   if (isLoading) {
     return (
@@ -35,7 +44,15 @@ const NavContainer = () => {
 
   return (
     <NavigationContainer>
-      {character ? <GameStack /> : <IntroStack />}
+      <Stack.Navigator>
+        {!player && <Stack.Screen name='Intro' component={IntroStack} />}
+        {player && !currentBattle && (
+          <Stack.Screen name='Main' component={MainTab} />
+        )}
+        {currentBattle && (
+          <Stack.Screen name='Battle' component={BattleStack} />
+        )}
+      </Stack.Navigator>
     </NavigationContainer>
   );
 };

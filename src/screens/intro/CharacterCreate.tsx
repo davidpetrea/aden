@@ -2,14 +2,22 @@ import TextField from 'components/ui/TextField';
 import { Text, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useUserStore } from '../../stores/userStore';
+import { usePlayerStore } from '../../stores/playerStore';
 import { useForm, Controller } from 'react-hook-form';
 import Character, { CharacterClass } from 'src/character';
 
+import {
+  IntroStackScreenProps,
+  RootStackScreenProps,
+} from 'src/navigation/types';
+
 type FormState = Pick<Character, 'name' | 'specialization'>;
 
-function CharacterCreate() {
-  const { createCharacter } = useUserStore();
+function CharacterCreate({
+  navigation,
+  route,
+}: IntroStackScreenProps<'CharacterCreate'>) {
+  const createPlayer = usePlayerStore((state) => state.createPlayer);
 
   // TODO: Add proper validation
   const {
@@ -24,8 +32,15 @@ function CharacterCreate() {
     },
   });
 
-  const onSubmit = (data: FormState) => {
-    createCharacter(data);
+  const onSubmit = async (data: FormState) => {
+    await createPlayer(data);
+
+    navigation.navigate('Main', {
+      screen: 'Home',
+      params: {
+        screen: 'Town',
+      },
+    });
   };
 
   const characterSpecialization = watch('specialization');

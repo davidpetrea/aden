@@ -3,19 +3,20 @@ import {
   CardStyleInterpolators,
   HeaderStyleInterpolators,
 } from '@react-navigation/stack';
-import Home from '../screens/game/Home';
-import Inventory from '../screens/game/Inventory';
+import Town from '../../../screens/main/Town';
+import Inventory from '../../../screens/main/Inventory';
+import { HomeStackParamsList } from 'src/navigation/types';
 
-const Stack = createStackNavigator(); // creates object for Stack Navigator
+const Stack = createStackNavigator<HomeStackParamsList>();
 
-const HomeScreenNavigator = () => {
+const HomeStack = () => {
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
       }}
     >
-      <Stack.Screen name='Main' component={Home} />
+      <Stack.Screen name='Town' component={Town} />
       <Stack.Screen
         name='Inventory'
         component={Inventory}
@@ -29,4 +30,4 @@ const HomeScreenNavigator = () => {
   );
 };
 
-export default HomeScreenNavigator;
+export default HomeStack;
