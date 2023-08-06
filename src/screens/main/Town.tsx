@@ -118,7 +118,6 @@ function Town({ navigation, route }: HomeStackScreenProps<'Town'>) {
 
     resetAP();
 
-    console.log(getCurrentBattle());
   };
 
   const handleEnemyDamage = (enemyId: string) => {

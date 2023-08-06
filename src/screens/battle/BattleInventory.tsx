@@ -12,12 +12,12 @@ function BattleInventory({
   const endBattle = useGameManagerStore((state) => state.endBattle);
 
   if (!currentBattle) {
-    return <View>Error loading battle. Try restarting the app.</View>;
+    return null;
   }
 
   return (
     <SafeAreaView className='flex-1 gap-y-4 items-center bg-neutral-900 p-4'>
-      <Text>Battle Screen</Text>
+      <Text>Inventory</Text>
       <Pressable
         className={`bg-neutral-800 font-bold p-4 rounded-lg w-2/3 transition duration-200 ease-in-out`}
         onPress={() => {

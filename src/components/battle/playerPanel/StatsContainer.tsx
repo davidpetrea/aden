@@ -25,15 +25,15 @@ const StatsContainer = () => {
     <View className='bg-green-300 flex-row justify-between'>
       {/* Player info */}
       <View className='w-2/3 bg-neutral-800 '>
-        <View className='flex-row justify-between p-2 w-full'>
-          <View className='flex-row items-end'>
+        <View className='flex-row justify-between p-2 w-full border-b border-stone-950'>
+          <View className='items-start'>
             <Text className='text-gray-200 font-bold text-3xl'>
               {player.name}
             </Text>
             <Text
               className={`text-[${
                 colors[player?.specialization]
-              }] font-bold capitalize ml-2 text-sm`}
+              }] font-bold capitalize text-sm`}
             >
               {player.specialization}
             </Text>
@@ -46,7 +46,7 @@ const StatsContainer = () => {
                   Lv. {player.level}
                 </Text>
                 <Text className='text-gray-200 font-bold'>
-                  {player.currentExp}/{player.currentExpRequired}
+                  EXP {player.currentExp}/{player.currentExpRequired}
                 </Text>
               </View>
 
@@ -68,15 +68,15 @@ const StatsContainer = () => {
                   <Text className='text-2xl font-bold text-gray-200'>HP</Text>
                 </View>
                 <View className='bg-neutral-900 h-8 flex-row items-center rounded-xl justify-center px-2 flex-1'>
-                  <View className='flex-1'>
+                  <View className='flex-1 mr-2'>
                     <View
-                      style={{ width: `${healthFillWidth}%`, elevation: 10 }}
-                      className={`bg-red-400 h-4 rounded-lg mr-2`}
+                      style={{ width: `${healthFillWidth}%`, elevation: 3 }}
+                      className={`bg-rose-500 h-4 rounded-lg`}
                     ></View>
                   </View>
 
                   <View className='border-l border-neutral-800 pl-2 my-0.5'>
-                    <Text className='text-lg font-bold text-red-400'>
+                    <Text className='text-lg font-bold text-rose-500'>
                       {player.currentHealth}/{player.maxHealth}
                     </Text>
                   </View>
@@ -91,26 +91,30 @@ const StatsContainer = () => {
             <Text className='text-2xl font-bold text-gray-200'>AP</Text>
           </View>
           <View className='p-2 flex-row gap-x-4'>
-            {actionPoints.map((ap) => {
+            {actionPoints.map((ap, index) => {
               if (ap)
                 return (
-                  <View className='rounded-full bg-neutral-900 w-8 h-8 flex justify-center items-center'>
-                    <View className='bg-orange-400 rounded-full w-5 h-5'></View>
+                  <View
+                    key={index}
+                    className='rounded-full bg-neutral-900 w-8 h-8 flex justify-center items-center'
+                  >
+                    <View className='bg-violet-600 rounded-full w-5 h-5'></View>
                   </View>
                 );
               return (
-                <View className='rounded-full bg-neutral-900 w-8 h-8'></View>
+                <View
+                  key={index}
+                  className='rounded-full bg-neutral-900 w-8 h-8'
+                ></View>
               );
             })}
           </View>
         </View>
       </View>
       {/* Buffs/Debufss */}
-      <View className='w-1/3 bg-green-600 p-2'>
+      <View className='w-1/3 bg-stone-800 border-l border-stone-950 p-2'>
         <Text>Buffs/Debuffs</Text>
-        <Pressable onPress={() => consumeAP(1)}>
-          <Text>Consume AP</Text>
-        </Pressable>
+        <Text>TODO</Text>
       </View>
     </View>
   );

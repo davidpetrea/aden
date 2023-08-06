@@ -1,10 +1,12 @@
-import { Text, Pressable, View, ScrollView } from 'react-native';
-import { useEffect } from 'react';
+import { Text, Pressable, View, ScrollView, Alert } from 'react-native';
+import { useEffect, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePlayerStore } from '../../stores/playerStore';
 import { useGameManagerStore } from '../../stores/gameManagerStore';
 import { BattleStackScreenProps } from '../../navigation/types';
 import PlayerPanel from 'components/battle/playerPanel/PlayerPanel';
+
+const PLAYER_ID = 'player_id';
 
 function BattleMain({
   navigation,
@@ -13,6 +15,7 @@ function BattleMain({
   const player = usePlayerStore((state) => state.player);
   const damagePlayer = usePlayerStore((state) => state.damagePlayer);
   const healPlayer = usePlayerStore((state) => state.healPlayer);
+  const resetAP = usePlayerStore((state) => state.resetAP);
 
   const currentBattle = useGameManagerStore((state) => state.currentBattle);
   const currentTurnEntity = useGameManagerStore(
@@ -44,6 +47,8 @@ function BattleMain({
 
   const handleBattleWin = useGameManagerStore((state) => state.handleBattleWin);
 
+  const scrollViewRef = useRef<ScrollView>(null);
+
   const handleEndBattle = () => {
     if (currentBattle) endBattle();
   };
@@ -74,7 +79,8 @@ function BattleMain({
     healPlayer(parseInt(halfPlayerHp));
   };
 
-  const isPlayerTurn = currentTurnEntity?.id === 'player_id';
+  const isPlayerTurn = currentTurnEntity?.id === PLAYER_ID;
+
   //Main battle loop
   useEffect(() => {
     let timer: NodeJS.Timer;
@@ -96,6 +102,17 @@ function BattleMain({
             //check if player dead
             if (player?.currentHealth - result.playerDamage <= 0) {
               handlePlayerDeath();
+              Alert.alert(
+                'You died!',
+                'Luckily, you somehow wake up back in town.',
+                [
+                  {
+                    text: 'Wake up',
+                    onPress: () => handleDefeatEndBattle(),
+                    style: 'cancel',
+                  },
+                ]
+              );
             }
           }
         }
@@ -110,13 +127,16 @@ function BattleMain({
   }, [currentTurnEntity, currentRoundOrder, player, isOngoing, isPlayerTurn]);
 
   return (
-    <SafeAreaView className='flex-1 gap-y-4 items-center bg-neutral-900'>
+    <SafeAreaView className='flex-1 items-center bg-neutral-900  justify-between'>
       <Text className='text-xl text-white font-bold'>Battle Screen</Text>
+      <Text className='text-base text-white font-semibold'>
+        Current round: {currentBattle?.roundCounter}
+      </Text>
       <Text className='text-base text-white font-semibold'>
         Current turn: {currentBattle?.currentTurnEntity?.name}
       </Text>
       {/* Enemies */}
-      <View className='my-4 flex-row flex-wrap w-full justify-center'>
+      <View className='my-2 flex-row flex-wrap w-full justify-center'>
         {currentBattle?.enemies.map((enemy) => (
           <Pressable
             className={`bg-neutral-800 font-bold p-4 rounded-lg border w-[30%] mr-2 mb-2 ${
@@ -146,7 +166,7 @@ function BattleMain({
         ))}
       </View>
       {/* Queue */}
-      <View className='my-4 flex w-full gap-x-2 mb-2 border border-gray-300 py-2 rounded-2xl'>
+      <View className='m-2 flex w-full mb-2 p-2 border border-slte-700py-2 rounded-2xl'>
         <Text className='text-white mb-2'>Queue:</Text>
         <View className='flex-row flex-wrap'>
           {currentBattle?.currentRoundOrder?.map((entity) => (
@@ -164,31 +184,30 @@ function BattleMain({
         </View>
       </View>
       {/* Battle log */}
-      <ScrollView
-        className='my-4 w-full gap-x-2 bg-gray-500 rounded-md max-h-[300px]'
-        contentContainerStyle={{ padding: 8 }}
-      >
-        {currentBattle?.log.map((entry) => (
-          <Text
-            key={entry.id}
-            className='text-base text-white font-semibold'
-          >{`${entry.content}`}</Text>
-        ))}
-      </ScrollView>
+      <View className='mx-4 w-full'>
+        <ScrollView
+          ref={scrollViewRef}
+          className='bg-neutral-800 rounded-md h-[200px] mx-2'
+          contentContainerStyle={{ padding: 8 }}
+          onContentSizeChange={() =>
+            scrollViewRef.current?.scrollToEnd({ animated: true })
+          }
+        >
+          {currentBattle?.log.map((entry) => (
+            <Text
+              key={entry.id}
+              className='text-base text-white font-semibold'
+            >{`${entry.content}`}</Text>
+          ))}
+        </ScrollView>
+      </View>
+
       {currentBattle?.currentTurnEntity?.id === 'player_id' && isOngoing && (
-        <Text className='text-xl font-semibold text-green-300'>
-          Player turn is NOW!
+        <Text className='text-xl font-semibold text-gray-200'>
+          Your turn! Select your skill and then tap on the target enemies.
         </Text>
       )}
-      {/* Player stats */}
-      <View>
-        <Text className='text-2xl font-semibold text-white'>
-          Health:{' '}
-          <Text className='text-3xl text-red-500'>
-            {player?.currentHealth}/{player?.maxHealth}
-          </Text>
-        </Text>
-      </View>
+
       {currentBattle?.isDefeat && (
         <>
           <Text className='text-3xl text-red-500'>Battle lost...</Text>
@@ -215,7 +234,9 @@ function BattleMain({
           </Pressable>
         </>
       )}
-      <PlayerPanel />
+      <View className='self-end bg-red-300 max-h-[30%]'>
+        <PlayerPanel />
+      </View>
     </SafeAreaView>
   );
 }

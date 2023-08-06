@@ -31,6 +31,7 @@ export type Battle = {
   currentTurnEntity?: Entity;
   currentRoundOrder?: Entity[];
   log: LogEntry[];
+  roundCounter?: number;
 };
 
 export type EnemyActionResult =
@@ -89,6 +90,7 @@ export const useGameManagerStore = create<GameManagerState>()((set, get) => ({
       currentBattle: {
         ...currentBattle,
         isOngoing: true,
+        roundCounter: 1,
         currentRoundOrder: initialRoundOrder,
         currentTurnEntity: initialRoundOrder[0],
       },
@@ -209,16 +211,35 @@ export const useGameManagerStore = create<GameManagerState>()((set, get) => ({
 
     if (!prevEntity) return; //TODO:test this
 
-    const slicedArray = prevOrder?.slice(1)!;
-    const newRoundOrder = [...slicedArray, prevEntity];
+    const newCurrentRoundOrder = prevOrder?.slice(1)!;
 
-    set({
-      currentBattle: {
-        ...currentBattle,
-        currentRoundOrder: newRoundOrder,
-        currentTurnEntity: newRoundOrder[0],
-      },
-    });
+    //If last turn in this round, setup nextRound
+    if (!newCurrentRoundOrder.length) {
+      // Recalculate order for next round
+      const nextRoundOrder = [currentBattle.player, ...currentBattle.enemies]
+        .filter((entity) => entity.currentHealth > 0)
+        .sort((a, b) => a.initiative - b.initiative);
+
+      //TODO: Handle abilities cooldown for alive entities
+      //TODO: Do anything round end/start related here
+
+      set({
+        currentBattle: {
+          ...currentBattle,
+          currentRoundOrder: nextRoundOrder,
+          currentTurnEntity: nextRoundOrder[0],
+          roundCounter: currentBattle.roundCounter! + 1,
+        },
+      });
+    } else {
+      set({
+        currentBattle: {
+          ...currentBattle,
+          currentRoundOrder: newCurrentRoundOrder,
+          currentTurnEntity: newCurrentRoundOrder[0],
+        },
+      });
+    }
   },
   handleEnemyDeath: (enemyId) => {
     const currentBattle = get().currentBattle;
