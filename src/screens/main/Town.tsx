@@ -22,6 +22,8 @@ const enemy1: Enemy = {
   initiative: 15,
   loot: ['item1'],
   damage: 3,
+  level: 2,
+  grade: 'common',
 };
 
 const enemy2: Enemy = {
@@ -32,6 +34,8 @@ const enemy2: Enemy = {
   initiative: 3,
   loot: ['item1', 'item2'],
   damage: 2,
+  level: 1,
+  grade: 'common',
 };
 const enemy3: Enemy = {
   name: 'Skeleton Archer',
@@ -41,6 +45,8 @@ const enemy3: Enemy = {
   initiative: 3,
   loot: ['item1', 'item2'],
   damage: 2,
+  level: 3,
+  grade: 'common',
 };
 const enemy4: Enemy = {
   name: 'Skeleton Archer',
@@ -50,6 +56,8 @@ const enemy4: Enemy = {
   initiative: 3,
   loot: ['item1', 'item2'],
   damage: 2,
+  level: 2,
+  grade: 'common',
 };
 const enemy5: Enemy = {
   name: 'Skeleton Archer',
@@ -59,6 +67,8 @@ const enemy5: Enemy = {
   initiative: 3,
   loot: ['item1', 'item2'],
   damage: 2,
+  level: 2,
+  grade: 'common',
 };
 
 const enemy6: Enemy = {
@@ -69,6 +79,8 @@ const enemy6: Enemy = {
   initiative: 3,
   loot: ['item1', 'item2'],
   damage: 2,
+  level: 2,
+  grade: 'common',
 };
 const enemy7: Enemy = {
   name: 'Skeleton Archer',
@@ -78,6 +90,8 @@ const enemy7: Enemy = {
   initiative: 3,
   loot: ['item1', 'item2'],
   damage: 2,
+  level: 2,
+  grade: 'common',
 };
 
 function Town({ navigation, route }: HomeStackScreenProps<'Town'>) {
@@ -94,14 +108,12 @@ function Town({ navigation, route }: HomeStackScreenProps<'Town'>) {
     currentBattle,
     getCurrentBattle,
     endBattle,
-    damageEnemyById,
   } = useGameManagerStore((state) => ({
     getCurrentBattle: state.getCurrentBattle,
     setCurrentBattle: state.setCurrentBattle,
     initBattle: state.initBattle,
     currentBattle: state.currentBattle,
     endBattle: state.endBattle,
-    damageEnemyById: state.damageEnemyById,
   }));
 
   const newBattle: Battle = {
@@ -117,11 +129,6 @@ function Town({ navigation, route }: HomeStackScreenProps<'Town'>) {
     initBattle();
 
     resetAP();
-
-  };
-
-  const handleEnemyDamage = (enemyId: string) => {
-    damageEnemyById(enemyId, player?.damage ?? 0);
   };
 
   if (!player) {
@@ -159,26 +166,6 @@ function Town({ navigation, route }: HomeStackScreenProps<'Town'>) {
           </Text>
         </Text>
       </View>
-      {/* Skills */}
-      {/* <View>
-        <Text className='text-orange-500'>Your skills:</Text>
-        {player.skills.map((skill) => (
-          <Text key={skill.name} className='text-slate-50'>
-            {skill.name}
-          </Text>
-        ))}
-      </View> */}
-      {/* <Pressable
-        className={`bg-neutral-800 font-bold p-4 rounded-lg w-2/3 transition duration-200 ease-in-out`}
-        onPress={() => {
-          learnSkill(Whirlwind);
-        }}
-      >
-        <Text className='text-slate-50 font-[600] text-center uppercase font-[Josefin-Sans]'>
-          Learn skill
-        </Text>
-      </Pressable> */}
-
       <Pressable
         className={`bg-neutral-800 font-bold p-4 rounded-lg w-2/3 transition duration-200 ease-in-out`}
         onPress={() => {

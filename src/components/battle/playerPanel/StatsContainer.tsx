@@ -1,6 +1,7 @@
 import { View, Text, Pressable } from 'react-native';
 import { usePlayerStore } from '../../../stores/playerStore';
 import { colors } from 'theme/colors';
+import HealthBar from '../HealthBar';
 
 const StatsContainer = () => {
   const player = usePlayerStore((state) => state.player);
@@ -22,7 +23,7 @@ const StatsContainer = () => {
   actionPoints.fill(false, player.currentAP);
 
   return (
-    <View className='bg-green-300 flex-row justify-between'>
+    <View className='flex-row justify-between'>
       {/* Player info */}
       <View className='w-2/3 bg-neutral-800 '>
         <View className='flex-row justify-between p-2 w-full border-b border-stone-950'>
@@ -61,29 +62,7 @@ const StatsContainer = () => {
         </View>
         {/* Health bar */}
         <View className='p-2'>
-          <View className='flex-row w-full items-start'>
-            <View className='flex-1 items-end'>
-              <View className='flex-row items-center'>
-                <View className='mr-2 '>
-                  <Text className='text-2xl font-bold text-gray-200'>HP</Text>
-                </View>
-                <View className='bg-neutral-900 h-8 flex-row items-center rounded-xl justify-center px-2 flex-1'>
-                  <View className='flex-1 mr-2'>
-                    <View
-                      style={{ width: `${healthFillWidth}%`, elevation: 3 }}
-                      className={`bg-rose-500 h-4 rounded-lg`}
-                    ></View>
-                  </View>
-
-                  <View className='border-l border-neutral-800 pl-2 my-0.5'>
-                    <Text className='text-lg font-bold text-rose-500'>
-                      {player.currentHealth}/{player.maxHealth}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
+          <HealthBar entity={player} />
         </View>
         {/* Action points */}
         <View className='flex-row items-center mx-2'>

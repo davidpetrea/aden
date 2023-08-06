@@ -1,6 +1,6 @@
 import { Text, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { usePlayerStore } from '../../stores/playerStore';
+
 import { useGameManagerStore } from '../../stores/gameManagerStore';
 import { BattleStackScreenProps } from 'src/navigation/types';
 

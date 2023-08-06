@@ -1,12 +1,21 @@
-import { Text, Pressable, View, ScrollView, Alert } from 'react-native';
-import { useEffect, useRef } from 'react';
+import {
+  Text,
+  Pressable,
+  View,
+  ScrollView,
+  Alert,
+  FlatList,
+  BackHandler,
+} from 'react-native';
+import { useEffect, useRef, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { usePlayerStore } from '../../stores/playerStore';
-import { useGameManagerStore } from '../../stores/gameManagerStore';
+import { PLAYER_ID, usePlayerStore } from '../../stores/playerStore';
+import { Enemy, useGameManagerStore } from '../../stores/gameManagerStore';
 import { BattleStackScreenProps } from '../../navigation/types';
 import PlayerPanel from 'components/battle/playerPanel/PlayerPanel';
-
-const PLAYER_ID = 'player_id';
+import EnemyCard from 'components/battle/enemy/EnemyCard';
+import { useFocusEffect } from '@react-navigation/native';
+import { Skill } from 'src/skills/skills';
 
 function BattleMain({
   navigation,
@@ -16,6 +25,9 @@ function BattleMain({
   const damagePlayer = usePlayerStore((state) => state.damagePlayer);
   const healPlayer = usePlayerStore((state) => state.healPlayer);
   const resetAP = usePlayerStore((state) => state.resetAP);
+  const decrementActiveCooldowns = usePlayerStore(
+    (state) => state.decrementActiveCooldowns
+  );
 
   const currentBattle = useGameManagerStore((state) => state.currentBattle);
   const currentTurnEntity = useGameManagerStore(
@@ -33,8 +45,16 @@ function BattleMain({
 
   const addToBattleLog = useGameManagerStore((state) => state.addToBattleLog);
   const nextTurn = useGameManagerStore((state) => state.nextTurn);
-  const damageEnemyById = useGameManagerStore((state) => state.damageEnemyById);
   const endBattle = useGameManagerStore((state) => state.endBattle);
+
+  const castMultipleTargetEnemySkill = useGameManagerStore(
+    (state) => state.castMultipleTargetEnemySkill
+  );
+
+  const resetSkillCooldowns = usePlayerStore(
+    (state) => state.resetSkillCooldowns
+  );
+  const updateSkillOnCast = usePlayerStore((state) => state.updateSkillOnCast);
   const handleCurrentEnemyAction = useGameManagerStore(
     (state) => state.handleCurrentEnemyAction
   );
@@ -48,27 +68,13 @@ function BattleMain({
   const handleBattleWin = useGameManagerStore((state) => state.handleBattleWin);
 
   const scrollViewRef = useRef<ScrollView>(null);
+  const { navigate } = navigation;
 
   const handleEndBattle = () => {
-    if (currentBattle) endBattle();
-  };
-
-  //TODO: handlePlayerAction - based on type : attack / skill / item
-  const handleEnemyDamage = (enemyId: string) => {
-    const result = damageEnemyById(enemyId, player?.damage ?? 0);
-
-    if (result) {
-      if (result.logEntry) addToBattleLog(result.logEntry);
-
-      if (result.isDead) {
-        //Handle enemy death
-        handleEnemyDeath(enemyId);
-
-        if (result.isLastEnemy) {
-          handleBattleWin();
-        }
-      }
-      nextTurn();
+    if (currentBattle) {
+      endBattle();
+      resetAP();
+      resetSkillCooldowns();
     }
   };
 
@@ -79,8 +85,14 @@ function BattleMain({
     healPlayer(parseInt(halfPlayerHp));
   };
 
-  const isPlayerTurn = currentTurnEntity?.id === PLAYER_ID;
+  const handlePlayerEndTurn = () => {
+    resetAP();
+    decrementActiveCooldowns();
+    nextTurn();
+  };
 
+  const handleTargetSelf = () => {};
+  const isPlayerTurn = currentTurnEntity?.id === PLAYER_ID;
   //Main battle loop
   useEffect(() => {
     let timer: NodeJS.Timer;
@@ -126,68 +138,95 @@ function BattleMain({
     };
   }, [currentTurnEntity, currentRoundOrder, player, isOngoing, isPlayerTurn]);
 
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        //TODO: prompt user if sure that he wants to exit battle
+
+        handleEndBattle();
+        //navigate to town
+        navigate('Main', {
+          screen: 'Home',
+          params: {
+            screen: 'Town',
+          },
+        });
+
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+
+      return () => subscription.remove();
+    }, [])
+  );
+
+  if (!player) return null;
+
+  const hasEnoughAPForSelectedSkill =
+    player?.skills.selected.baseAPCost <= player?.currentAP;
+
+  const handleMultipleTargetPlayerSkill = (skill: Skill) => {
+    //Check if skill on cooldown
+    if (skill.activeCooldown) return;
+
+    //Check if player has enough AP
+    if (player.currentAP < skill.baseAPCost) return;
+
+    const result = castMultipleTargetEnemySkill(skill);
+
+    if (result) {
+      if (result.logEntries) {
+        result.logEntries.forEach((logEntry) => addToBattleLog(logEntry));
+      }
+
+      if (result.killedEnemies?.length) {
+        result.killedEnemies.forEach((killedEnemy) =>
+          handleEnemyDeath(killedEnemy.id)
+        );
+      }
+
+      if (result.wasLastEnemy) {
+        handleBattleWin();
+        resetSkillCooldowns();
+      }
+    }
+
+    updateSkillOnCast(skill);
+  };
+
   return (
-    <SafeAreaView className='flex-1 items-center bg-neutral-900  justify-between'>
-      <Text className='text-xl text-white font-bold'>Battle Screen</Text>
-      <Text className='text-base text-white font-semibold'>
-        Current round: {currentBattle?.roundCounter}
-      </Text>
-      <Text className='text-base text-white font-semibold'>
-        Current turn: {currentBattle?.currentTurnEntity?.name}
+    <SafeAreaView className='flex-1 items-center bg-neutral-900 justify-between'>
+      <Text className='text-xl text-gray-200 font-semibold '>
+        Current turn: {currentBattle?.currentTurnEntity?.name} &middot;{' '}
+        <Text className='text-base text-gray-300 font-semibold'>
+          Round: {currentBattle?.roundCounter}
+        </Text>
       </Text>
       {/* Enemies */}
-      <View className='my-2 flex-row flex-wrap w-full justify-center'>
-        {currentBattle?.enemies.map((enemy) => (
-          <Pressable
-            className={`bg-neutral-800 font-bold p-4 rounded-lg border w-[30%] mr-2 mb-2 ${
-              enemy.currentHealth === 0
-                ? 'border-red-500'
-                : currentBattle?.currentTurnEntity?.id === enemy.id
-                ? 'border-gray-100'
-                : 'border-green-500'
-            }`}
-            key={enemy.id}
-            onPress={() => handleEnemyDamage(enemy.id)}
-            disabled={
-              enemy.currentHealth === 0 ||
-              !isOngoing ||
-              isDefeat ||
-              !isPlayerTurn
-            }
-          >
-            <Text className='text-white text-lg'>{enemy.name}</Text>
-            <Text className='text-lg text-white font-semibold'>
-              Health:
-              <Text className='font-bold test-base text-red-500'>
-                {enemy.currentHealth}/{enemy.maxHealth}
-              </Text>
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      {/* Queue */}
-      <View className='m-2 flex w-full mb-2 p-2 border border-slte-700py-2 rounded-2xl'>
-        <Text className='text-white mb-2'>Queue:</Text>
-        <View className='flex-row flex-wrap'>
-          {currentBattle?.currentRoundOrder?.map((entity) => (
-            <Text
-              key={entity.id}
-              className={`text-white text-lg mr-2 mb-2 bg-gray-700 rounded-xl p-1 px-2 border border-transparent ${
-                currentBattle.currentTurnEntity?.id === entity.id
-                  ? 'border-gray-100'
-                  : ''
-              }`}
-            >
-              {entity.name}
-            </Text>
-          ))}
-        </View>
-      </View>
+      <FlatList
+        data={currentBattle?.enemies}
+        renderItem={({ item }: { item: Enemy }) => (
+          <EnemyCard enemy={item} handleSelect={() => console.log('123')} />
+        )}
+        keyExtractor={(item) => item.id}
+        className='my-2 w-full max-h-[35%] border-b border-stone-700'
+        contentContainerStyle={{
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 8,
+        }}
+        numColumns={2}
+      />
+
       {/* Battle log */}
-      <View className='mx-4 w-full'>
+      <View className='mx-4 mb-4 w-full flex-1'>
         <ScrollView
           ref={scrollViewRef}
-          className='bg-neutral-800 rounded-md h-[200px] mx-2'
+          className='bg-neutral-800 rounded-md mx-2'
           contentContainerStyle={{ padding: 8 }}
           onContentSizeChange={() =>
             scrollViewRef.current?.scrollToEnd({ animated: true })
@@ -201,26 +240,62 @@ function BattleMain({
           ))}
         </ScrollView>
       </View>
+      {isPlayerTurn && isOngoing && (
+        <View className=' w-full items-center my-4'>
+          <Text className='text-lg font-semibold text-gray-200 mb-1'>
+            Your turn! Select your skill and then tap on the target enemies.
+          </Text>
 
-      {currentBattle?.currentTurnEntity?.id === 'player_id' && isOngoing && (
-        <Text className='text-xl font-semibold text-gray-200'>
-          Your turn! Select your skill and then tap on the target enemies.
-        </Text>
+          <View className='w-full items-center flex-row justify-center'>
+            {/* Selected skill button */}
+            {player?.skills.selected.targetType === 'self' && (
+              <Pressable
+                className={`bg-purple-700 w-1/3 p-2 rounded-lg mr-8 ${
+                  !hasEnoughAPForSelectedSkill ? 'opacity-50' : ''
+                }`}
+                onPress={handleTargetSelf}
+                style={{ elevation: 4 }}
+                disabled={!hasEnoughAPForSelectedSkill}
+              >
+                <Text className='text-center font-bold text-gray-200 text-lg'>
+                  Cast {player?.skills.selected.name} on yourself.
+                </Text>
+              </Pressable>
+            )}
+            {player?.skills.selected.targetCountType === 'multiple' && (
+              <Pressable
+                className={`bg-purple-700 w-1/3 p-2 rounded-lg mr-8 ${
+                  !hasEnoughAPForSelectedSkill ? 'opacity-50' : ''
+                }`}
+                onPress={() =>
+                  handleMultipleTargetPlayerSkill(player.skills.selected)
+                }
+                style={{ elevation: 4 }}
+                disabled={!hasEnoughAPForSelectedSkill}
+              >
+                <Text className='text-center font-bold text-gray-200 text-lg'>
+                  Cast {player?.skills.selected.name}
+                </Text>
+                <Text className='text-center text-base font-bold text-gray-300'>
+                  {currentBattle?.selectedEnemies?.length ?? 0}/
+                  {player.skills.selected.maxTargetCount} enemies selected
+                </Text>
+              </Pressable>
+            )}
+
+            <Pressable
+              className='bg-stone-600 w-1/3 p-2 rounded-lg'
+              onPress={handlePlayerEndTurn}
+              style={{ elevation: 4 }}
+            >
+              <Text className='text-center font-bold text-gray-200 text-lg'>
+                END TURN
+              </Text>
+            </Pressable>
+          </View>
+        </View>
       )}
 
-      {currentBattle?.isDefeat && (
-        <>
-          <Text className='text-3xl text-red-500'>Battle lost...</Text>
-          <Pressable
-            className={`bg-neutral-800 font-bold p-4 rounded-lg w-2/3 transition duration-200 ease-in-out`}
-            onPress={handleDefeatEndBattle}
-          >
-            <Text className='text-slate-50 font-[600] text-center uppercase font-[Josefin-Sans]'>
-              Return to town
-            </Text>
-          </Pressable>
-        </>
-      )}
       {currentBattle?.isWon && (
         <>
           <Text className='text-3xl text-red-300'>Battle won!!!</Text>

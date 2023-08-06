@@ -2,82 +2,23 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { create } from 'zustand';
 import { Entity } from './gameManagerStore';
+import {
+  AutoAttack,
+  Fireball,
+  Skill,
+  SkillIcons,
+  SkillId,
+  HeavyStrike,
+  Tackle,
+} from '../skills/skills';
 
-import AutoAttackIcon from '../../assets/svg/autoattack.svg';
-import { SvgProps } from 'react-native-svg/lib/typescript/ReactNativeSVG';
-import React from 'react';
 //TODO: Improve and move skill typing
 const WARRIOR_BASE_HEALTH = 44;
 const MAGE_BASE_HEALTH = 32;
-
-enum SkillIDs {
-  'BASIC_ATTACK' = 'BASIC_ATTACK',
-  'TACKLE' = 'TACKLE',
-  'FIREBALL' = 'FIREBALL',
-}
-
-export type SkillId = keyof typeof SkillIDs;
-
-export const SkillIcons: Record<SkillId, React.FC<SvgProps>> = {
-  BASIC_ATTACK: AutoAttackIcon,
-  TACKLE: AutoAttackIcon,
-  FIREBALL: AutoAttackIcon,
-};
+export const PLAYER_ID = 'player_id';
 
 //TODO: Find better way to config class defaults to make it more readable/scalable
 export type CharacterClass = 'warrior' | 'mage';
-
-export type Skill = {
-  id: SkillId;
-  name: string;
-  level: number;
-  targetType: 'self' | 'enemy';
-  targetCountType: 'single' | 'multiple';
-  maxTargetCount?: number;
-  baseAPCost: number;
-  baseDamage: number;
-  cooldown?: number;
-  icon: React.FC<SvgProps>;
-  specialization: CharacterClass | CharacterClass[]; //TODO: proper typing of array of specs, union => set
-};
-
-const AutoAttack: Skill = {
-  baseDamage: 5,
-  id: SkillIDs.BASIC_ATTACK,
-  level: 1,
-  name: 'Basic attack',
-  targetCountType: 'single',
-  targetType: 'enemy',
-  icon: AutoAttackIcon,
-  specialization: ['mage', 'warrior'],
-  baseAPCost: 1,
-};
-
-const Tackle: Skill = {
-  baseDamage: 10,
-  id: SkillIDs.TACKLE,
-  level: 1,
-  name: 'Tackle',
-  targetCountType: 'single',
-  targetType: 'enemy',
-  icon: AutoAttackIcon,
-  specialization: 'warrior',
-  cooldown: 1,
-  baseAPCost: 2,
-};
-
-const Fireball: Skill = {
-  baseDamage: 15,
-  id: SkillIDs.FIREBALL,
-  level: 1,
-  name: 'Fireball',
-  targetCountType: 'single',
-  targetType: 'enemy',
-  icon: AutoAttackIcon,
-  specialization: 'mage',
-  cooldown: 2,
-  baseAPCost: 2,
-};
 
 enum PlayerStorageFields {
   'player' = 'player',
@@ -104,8 +45,8 @@ const warriorDefaults: ClassSpecificFields = {
   initiative: 10,
   specialization: 'warrior',
   skills: {
-    unlocked: [AutoAttack, Tackle],
-    equipped: [AutoAttack, Tackle],
+    unlocked: [AutoAttack, Tackle, HeavyStrike],
+    equipped: [AutoAttack, Tackle, HeavyStrike],
     selected: AutoAttack,
   },
 };
@@ -149,6 +90,11 @@ interface PlayerState {
   healPlayer: (amount: number) => void;
   consumeAP: (amount: number) => void;
   resetAP: () => void;
+  selectSkill: (skillId: SkillId, callback: () => void) => void;
+  castSelfSkill: (skill: Skill) => void;
+  updateSkillOnCast: (skill: Skill) => void;
+  decrementActiveCooldowns: () => void;
+  resetSkillCooldowns: () => void;
 }
 
 export const usePlayerStore = create<PlayerState>()((set, get) => ({
@@ -172,8 +118,6 @@ export const usePlayerStore = create<PlayerState>()((set, get) => ({
           ...player.skills.selected,
           icon: SkillIcons[player.skills.selected.id],
         };
-
-        console.log('player skills before set?', player.skills.equipped);
 
         set({ player });
       }
@@ -297,6 +241,110 @@ export const usePlayerStore = create<PlayerState>()((set, get) => ({
       player: {
         ...currentPlayer,
         currentAP: currentPlayer.maxAP,
+      },
+    });
+  },
+  selectSkill: (skillId, resetSelectedEnemies) => {
+    const currentPlayer = get().player;
+    if (!currentPlayer) return;
+
+    //check if skill is already selected
+    if (currentPlayer.skills.selected.id === skillId) return;
+
+    const skill = currentPlayer.skills.equipped.find(
+      (skill) => skill.id === skillId
+    );
+
+    if (!skill) return;
+
+    resetSelectedEnemies();
+
+    set({
+      player: {
+        ...currentPlayer,
+        skills: {
+          ...currentPlayer.skills,
+          selected: skill,
+        },
+      },
+    });
+  },
+  castSelfSkill: (skill) => {
+    console.log('Casting self skill');
+  },
+  updateSkillOnCast: (skill) => {
+    const currentPlayer = get().player;
+    if (!currentPlayer) return;
+
+    const updatedSkill: Skill = {
+      ...skill,
+      activeCooldown: skill.baseCooldown ? skill.baseCooldown : 0,
+    };
+
+    set({
+      player: {
+        ...currentPlayer,
+        skills: {
+          ...currentPlayer.skills,
+          equipped: currentPlayer.skills.equipped.map((equippedSkill) => {
+            if (equippedSkill.id === skill.id) {
+              return updatedSkill;
+            }
+
+            return equippedSkill;
+          }),
+          selected: skill.baseCooldown
+            ? AutoAttack
+            : currentPlayer.skills.selected,
+        },
+        currentAP: Math.max(currentPlayer.currentAP - skill.baseAPCost, 0),
+      },
+    });
+  },
+
+  resetSkillCooldowns: () => {
+    const currentPlayer = get().player;
+    if (!currentPlayer) return;
+
+    set({
+      player: {
+        ...currentPlayer,
+        skills: {
+          ...currentPlayer.skills,
+          selected: {
+            ...currentPlayer.skills.selected,
+            activeCooldown: undefined,
+          },
+          equipped: currentPlayer.skills.equipped.map((skill) => ({
+            ...skill,
+            activeCooldown: undefined,
+          })),
+        },
+      },
+    });
+  },
+  decrementActiveCooldowns: () => {
+    const currentPlayer = get().player;
+    if (!currentPlayer) return;
+
+    set({
+      player: {
+        ...currentPlayer,
+        skills: {
+          ...currentPlayer.skills,
+          selected: {
+            ...currentPlayer.skills.selected,
+            activeCooldown: !!currentPlayer.skills.selected.activeCooldown
+              ? currentPlayer.skills.selected.activeCooldown - 1
+              : undefined,
+          },
+          equipped: currentPlayer.skills.equipped.map((skill) => ({
+            ...skill,
+            activeCooldown: !!skill.activeCooldown
+              ? skill.activeCooldown - 1
+              : undefined,
+          })),
+        },
       },
     });
   },

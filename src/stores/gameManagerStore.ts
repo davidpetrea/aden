@@ -1,9 +1,11 @@
 import uuid from 'react-native-uuid';
 import { create } from 'zustand';
-import { Player } from './playerStore';
+import { PLAYER_ID, Player } from './playerStore';
+import { Skill } from 'src/skills/skills';
 
 export type Entity = {
   id: string;
+  level: number;
   name: string;
   currentHealth: number;
   maxHealth: number;
@@ -14,6 +16,7 @@ export type Entity = {
 export type Enemy = Entity & {
   id: string;
   loot: string[];
+  grade: 'common' | 'rare' | 'elite' | 'boss';
 };
 
 type LogEntry = {
@@ -32,6 +35,7 @@ export type Battle = {
   currentRoundOrder?: Entity[];
   log: LogEntry[];
   roundCounter?: number;
+  selectedEnemies?: Entity[];
 };
 
 export type EnemyActionResult =
@@ -43,9 +47,17 @@ export type EnemyActionResult =
 
 export type PlayerAttackResult =
   | {
-      isDead?: boolean;
-      isLastEnemy?: boolean;
+      hasBeenKilled?: boolean;
+      wasLastEnemy?: boolean;
       logEntry?: string;
+    }
+  | undefined;
+
+export type PlayerMultipleAttackResult =
+  | {
+      killedEnemies?: Enemy[];
+      wasLastEnemy?: boolean;
+      logEntries?: string[];
     }
   | undefined;
 
@@ -56,13 +68,21 @@ interface GameManagerState {
   initBattle: () => void;
   endBattle: () => void;
   setCurrentTurnEntity: (entity: Entity) => void;
-  damageEnemyById: (enemyId: string, damage: number) => PlayerAttackResult;
   addToBattleLog: (action: string) => void;
   nextTurn: () => void;
+  clearSelectedEnemies: () => void;
   handleCurrentEnemyAction: () => EnemyActionResult;
   handlePlayerDeath: () => void;
   handleEnemyDeath: (enemyId: string) => void;
   handleBattleWin: () => void;
+  handleSelectEnemies: (enemyId: string, selectedSkill: Skill) => void;
+  castSingleTargetEnemySkill: (
+    targetId: string,
+    skill: Skill
+  ) => PlayerAttackResult;
+  castMultipleTargetEnemySkill: (
+    selectedSkill: Skill
+  ) => PlayerMultipleAttackResult;
 }
 
 export const useGameManagerStore = create<GameManagerState>()((set, get) => ({
@@ -93,6 +113,7 @@ export const useGameManagerStore = create<GameManagerState>()((set, get) => ({
         roundCounter: 1,
         currentRoundOrder: initialRoundOrder,
         currentTurnEntity: initialRoundOrder[0],
+        selectedEnemies: [],
       },
     });
   },
@@ -118,51 +139,6 @@ export const useGameManagerStore = create<GameManagerState>()((set, get) => ({
         currentTurnEntity: entity,
       },
     });
-  },
-  damageEnemyById: (enemyId, damage) => {
-    const currentBattle = get().currentBattle;
-    if (!currentBattle) return;
-
-    const enemy = currentBattle.enemies.filter(
-      (enemy) => enemy.id === enemyId
-    )[0];
-    if (!enemy) return;
-
-    let isDead = false;
-    let isLastEnemy = false;
-
-    const updatedEnemies = currentBattle.enemies.map((enemy) => {
-      if (enemy.id === enemyId) {
-        if (enemy.currentHealth - damage <= 0) {
-          isDead = true;
-        }
-        return {
-          ...enemy,
-          currentHealth: isDead ? 0 : enemy.currentHealth - damage,
-        };
-      }
-
-      return enemy;
-    });
-
-    if (isDead && !updatedEnemies.some((enemy) => enemy.currentHealth > 0)) {
-      isLastEnemy = true;
-    }
-
-    set({
-      currentBattle: {
-        ...currentBattle,
-        enemies: updatedEnemies,
-      },
-    });
-
-    return {
-      isDead,
-      isLastEnemy,
-      logEntry: `${enemy.name} got hit for ${damage} DMG${
-        isDead ? ' and died' : '.'
-      }`,
-    };
   },
   addToBattleLog: (action) => {
     const currentBattle = get().currentBattle;
@@ -206,6 +182,12 @@ export const useGameManagerStore = create<GameManagerState>()((set, get) => ({
 
     if (!currentBattle) return;
 
+    let resetSelectedEnemies = false;
+    //If player just ended his turn, empty selected enemies
+    if (currentBattle.currentTurnEntity?.id === PLAYER_ID) {
+      resetSelectedEnemies = true;
+    }
+
     const prevOrder = currentBattle.currentRoundOrder;
     const prevEntity = currentBattle.currentTurnEntity;
 
@@ -229,6 +211,9 @@ export const useGameManagerStore = create<GameManagerState>()((set, get) => ({
           currentRoundOrder: nextRoundOrder,
           currentTurnEntity: nextRoundOrder[0],
           roundCounter: currentBattle.roundCounter! + 1,
+          selectedEnemies: resetSelectedEnemies
+            ? []
+            : currentBattle.selectedEnemies,
         },
       });
     } else {
@@ -237,6 +222,9 @@ export const useGameManagerStore = create<GameManagerState>()((set, get) => ({
           ...currentBattle,
           currentRoundOrder: newCurrentRoundOrder,
           currentTurnEntity: newCurrentRoundOrder[0],
+          selectedEnemies: resetSelectedEnemies
+            ? []
+            : currentBattle.selectedEnemies,
         },
       });
     }
@@ -283,7 +271,111 @@ export const useGameManagerStore = create<GameManagerState>()((set, get) => ({
       },
     });
   },
+  castSingleTargetEnemySkill: (targetId, skill) => {
+    //All checks should be already done before calling this action
+    const currentBattle = get().currentBattle;
 
+    if (!currentBattle) return;
+
+    const enemy = currentBattle.enemies.find((enemy) => enemy.id === targetId);
+
+    if (!enemy) return;
+
+    const isDead = enemy.currentHealth <= 0;
+
+    if (isDead) return;
+
+    //Calculate skill damage
+    //TODO: Complete skill/damage system which includes armor/magic resists, elements, etc.
+    const damage = skill.baseDamage;
+
+    const updatedEnemies = currentBattle.enemies.map((enemy) => {
+      if (enemy.id === targetId) {
+        return {
+          ...enemy,
+          currentHealth: Math.max(enemy.currentHealth - damage, 0),
+        };
+      }
+
+      return enemy;
+    });
+
+    const hasBeenKilled = enemy.currentHealth - damage <= 0;
+    const wasLastEnemy =
+      hasBeenKilled &&
+      updatedEnemies.filter((enemy) => enemy.currentHealth > 0).length === 0;
+
+    set({
+      currentBattle: {
+        ...currentBattle,
+        enemies: updatedEnemies,
+      },
+    });
+
+    return {
+      hasBeenKilled,
+      wasLastEnemy,
+      logEntry: `${enemy.name} got hit for ${damage} DMG by ${skill.name} ${
+        hasBeenKilled ? ' and died' : '.'
+      }`,
+    };
+  },
+  castMultipleTargetEnemySkill: (skill) => {
+    const currentBattle = get().currentBattle;
+
+    if (!currentBattle) return;
+
+    const selectedEnemies = currentBattle.selectedEnemies;
+
+    const selectedIds = selectedEnemies?.map(
+      (selectedEnemy) => selectedEnemy.id
+    );
+    if (!selectedEnemies?.length) return;
+
+    const damage = skill.baseDamage;
+
+    const killedEnemies: Enemy[] = [];
+    const logEntries: string[] = [];
+
+    const updatedEnemies = currentBattle.enemies.map((enemy) => {
+      if (selectedIds?.includes(enemy.id)) {
+        const hasBeenKilled = enemy.currentHealth - damage <= 0;
+        if (hasBeenKilled) {
+          killedEnemies.push(enemy);
+        }
+
+        const logEntry = `${enemy.name} got hit for ${damage} DMG by ${
+          skill.name
+        } ${hasBeenKilled ? ' and died' : '.'}`;
+
+        logEntries.push(logEntry);
+
+        return {
+          ...enemy,
+          currentHealth: Math.max(enemy.currentHealth - damage, 0),
+        };
+      }
+
+      return enemy;
+    });
+
+    const wasLastEnemy = !updatedEnemies.some(
+      (enemy) => enemy.currentHealth > 0
+    );
+
+    set({
+      currentBattle: {
+        ...currentBattle,
+        enemies: updatedEnemies,
+      },
+    });
+
+    return {
+      killedEnemies,
+      logEntries,
+      wasLastEnemy,
+    };
+  },
   handleBattleWin: () => {
     console.log('Battle won!');
     const currentBattle = get().currentBattle;
@@ -301,6 +393,66 @@ export const useGameManagerStore = create<GameManagerState>()((set, get) => ({
         ...currentBattle,
         isOngoing: false,
         isWon: true,
+      },
+    });
+  },
+  handleSelectEnemies: (enemyId, skill) => {
+    const currentBattle = get().currentBattle;
+
+    if (!currentBattle) return;
+
+    //Check if enemy is already selected
+    const isSelected = currentBattle.selectedEnemies?.some(
+      (selectedEnemy) => selectedEnemy.id === enemyId
+    );
+
+    const enemy = currentBattle.enemies.find((enemy) => enemy.id === enemyId);
+
+    if (!enemy) return;
+
+    //Check if skill can support multiple targets and has max targets defined
+    if (skill.targetCountType !== 'multiple' || !skill.maxTargetCount) return;
+
+    //Check if enemy is dead
+    const isDead = enemy.currentHealth <= 0;
+    const skillTargetAvailable =
+      !isSelected &&
+      currentBattle.selectedEnemies &&
+      currentBattle.selectedEnemies?.length < skill.maxTargetCount;
+
+    // Check if current skill target limit has been reached
+
+    if (isSelected) {
+      // Remove from selected []
+      set({
+        currentBattle: {
+          ...currentBattle,
+          selectedEnemies: currentBattle.selectedEnemies?.filter(
+            (selectedEnemy) => selectedEnemy.id !== enemyId
+          ),
+        },
+      });
+    } else {
+      // Do not select if dead or skill targets limits reached
+      if (isDead || !skillTargetAvailable) return;
+      //Add to selected []
+      set({
+        currentBattle: {
+          ...currentBattle,
+          selectedEnemies: [...currentBattle.selectedEnemies!, enemy],
+        },
+      });
+    }
+  },
+
+  clearSelectedEnemies: () => {
+    const currentBattle = get().currentBattle;
+
+    if (!currentBattle) return;
+    set({
+      currentBattle: {
+        ...currentBattle,
+        selectedEnemies: [],
       },
     });
   },
